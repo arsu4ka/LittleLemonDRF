@@ -5,7 +5,7 @@ from rest_framework.request import Request
 from rest_framework.permissions import IsAuthenticated
 from .permissions import IsDeliveryCrew, IsManager
 from .models import MenuItem
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from .serializer import MenuItemSerializer, UserSerializer
 
 
@@ -35,6 +35,7 @@ class ManagersView(APIView):
     permission_classes = [IsManager]
     
     def get(self, request: Request):
-        managers = User.objects.filter(name="Manager")
+        manager_group = Group.objects.get(name='Manager')
+        managers = User.objects.filter(groups__name=manager_group.name)
         managers_serializer = UserSerializer(managers, many=True)
         return Response(managers_serializer.data)
