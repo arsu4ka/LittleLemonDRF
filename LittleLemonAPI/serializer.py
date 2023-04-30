@@ -12,4 +12,4 @@ class MenuItemSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        exclude = ["password", "last_login", "date_joined"]
+        exclude = ["password", "last_login", "date_joined", "user_permissions", "groups"]
