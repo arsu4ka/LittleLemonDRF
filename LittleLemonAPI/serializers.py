@@ -7,9 +7,12 @@ class MenuItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = MenuItem
         fields = "__all__"
+        depth = 1
         
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        exclude = ["password", "last_login", "date_joined", "user_permissions", "groups"]
+        fields = "__all__"
+        extra_kwargs = {'password': {'write_only': True}}
+        depth = 1
