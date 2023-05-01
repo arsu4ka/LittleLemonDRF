@@ -1,13 +1,16 @@
-from rest_framework import generics, status
-from rest_framework.views import APIView
-from rest_framework.response import Response
+from rest_framework import generics
+from rest_framework import status
+from rest_framework import views
 from rest_framework.request import Request
+from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from .permissions import IsDeliveryCrew, IsManager
+from .permissions import IsManager
 from .models import MenuItem
 from django.contrib.auth.models import User, Group
 from .serializers import MenuItemSerializer, UserSerializer
 
+MANAGER_GROUP = Group.objects.get(pk=1)
+DELIVERY_CREW = Group.objects.get(pk=2)
 
 class MenuItemsView(generics.ListCreateAPIView):
     queryset = MenuItem.objects.all()
@@ -33,10 +36,44 @@ class MenuItemView(generics.RetrieveUpdateDestroyAPIView):
     
 class ManagersView(generics.ListCreateAPIView):
     permission_classes = [IsManager]
-    manager_group = Group.objects.get(pk=1)
-    queryset = User.objects.filter(groups__name='Manager')
+    queryset = User.objects.filter(groups=MANAGER_GROUP)
     serializer_class = UserSerializer
     
     def perform_create(self, serializer):
-        serializer.save(groups=[self.manager_group])
+        serializer.save(groups=[MANAGER_GROUP])
 
+
+class DestroyManagerView(views.APIView):
+    permission_classes = [IsManager]
+    
+    def delete(self, request: Request, pk: int):
+        user = User.objects.get(pk=pk)
+        if not user:
+            return Response({"message": "couldn't find user with given id"}, status.HTTP_404_NOT_FOUND)
+        
+        user.groups.remove(MANAGER_GROUP)
+        user.save(force_update=True)
+        return Response(UserSerializer(user).data, status.HTTP_200_OK)
+
+
+class DeliveryCrewsView(generics.ListCreateAPIView):
+    permission_classes = [IsManager]
+    queryset = User.objects.filter(groups=DELIVERY_CREW)
+    serializer_class = UserSerializer
+    
+    def perform_create(self, serializer):
+        serializer.save(groups=[DELIVERY_CREW])
+        
+        
+class DestroyDeliveryCrewView(views.APIView):
+    permission_classes = [IsManager]
+    
+    def delete(self, request: Request, pk: int):
+        user = User.objects.get(pk=pk)
+        if not user:
+            return Response({"message": "couldn't find user with given id"}, status.HTTP_404_NOT_FOUND)
+        
+        user.groups.remove(DELIVERY_CREW)
+        user.save(force_update=True)
+        return Response(UserSerializer(user).data, status.HTTP_200_OK)
+    
