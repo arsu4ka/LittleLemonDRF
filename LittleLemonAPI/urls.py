@@ -1,5 +1,5 @@
 from django.urls import path, include
-from .views import MenuItemsView, MenuItemView, ManagersView, DestroyManagerView, DeliveryCrewsView, DestroyDeliveryCrewView
+from .views import MenuItemsView, MenuItemView, ManagersView, DestroyManagerView, DeliveryCrewsView, DestroyDeliveryCrewView, CartListCreateDeleteView
 
 urlpatterns = [
     path("", include('djoser.urls')),
@@ -13,4 +13,7 @@ urlpatterns = [
     
     path("groups/delivery-crew/users", DeliveryCrewsView.as_view()),
     path("groups/delivery-crew/users/<int:pk>", DestroyDeliveryCrewView.as_view()),
+    
+    path("cart/menu-items", CartListCreateDeleteView.as_view()),
+    
 ]
