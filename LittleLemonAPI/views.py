@@ -79,15 +79,4 @@ class DestroyDeliveryCrewView(views.APIView):
 
 
 class CartListCreateDeleteView(generics.ListCreateAPIView):
-    queryset = Cart.objects.all()
-    serializer_class = CartSerializer
-
-    def perform_create(self, serializer):
-        quantity = serializer.validated_data['quantity']
-        menu_item = serializer.validated_data['menuitem']
-        serializer.validated_data['total_price'] = quantity * menu_item.price
-        serializer.save()
-
-    def get_queryset(self):
-        user = self.request.user
-        return Cart.objects.filter(user=user)
+    raise NotImplemented()
