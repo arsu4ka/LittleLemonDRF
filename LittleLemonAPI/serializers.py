@@ -1,4 +1,4 @@
-from .models import MenuItem
+from .models import MenuItem, Cart
 from django.contrib.auth.models import User
 from rest_framework import serializers
 
@@ -16,3 +16,10 @@ class UserSerializer(serializers.ModelSerializer):
         fields = "__all__"
         extra_kwargs = {'password': {'write_only': True}}
         depth = 1
+        
+
+class CartSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Cart
+        fields = ["menuitem", "quanity", "total_price"]
+        read_only_fields = ["total_price"]
