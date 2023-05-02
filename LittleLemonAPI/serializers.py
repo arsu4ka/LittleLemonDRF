@@ -21,5 +21,4 @@ class UserSerializer(serializers.ModelSerializer):
 class CartSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cart
-        fields = ["menuitem", "quanity", "total_price"]
-        read_only_fields = ["total_price"]
+        fields = "__all__"
