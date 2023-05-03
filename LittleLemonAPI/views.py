@@ -1,18 +1,15 @@
-from rest_framework import generics, mixins
+from rest_framework import generics
 from rest_framework import status
 from rest_framework import views
-from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
 from .mixins import SerializerByMethodMixin
 from .permissions import IsManager
 from .models import MenuItem, Cart
-from django.contrib.auth.models import User, Group
+from .constants import get_manager_group, get_delivery_crew_group
+from django.contrib.auth.models import User
 from .serializers import MenuItemSerializer, UserSerializer, CartSerializer, CartCreateSerializer
-
-MANAGER_GROUP = Group.objects.get(pk=1)
-DELIVERY_CREW = Group.objects.get(pk=2)
 
 
 class MenuItemsView(generics.ListCreateAPIView):
@@ -39,33 +36,33 @@ class MenuItemView(generics.RetrieveUpdateDestroyAPIView):
     
 class ManagersView(generics.ListCreateAPIView):
     permission_classes = [IsManager]
-    queryset = User.objects.filter(groups=MANAGER_GROUP)
+    queryset = User.objects.filter(groups=get_manager_group())
     serializer_class = UserSerializer
     
     def perform_create(self, serializer):
-        serializer.save(groups=[MANAGER_GROUP])
+        serializer.save(groups=[get_manager_group()])
 
 
 class DestroyManagerView(views.APIView):
     permission_classes = [IsManager]
     
-    def delete(self, pk: int):
+    def delete(self, request, pk: int):
         user = User.objects.get(pk=pk)
         if not user:
             return Response({"message": "couldn't find user with given id"}, status.HTTP_404_NOT_FOUND)
         
-        user.groups.remove(MANAGER_GROUP)
+        user.groups.remove(get_manager_group())
         user.save(force_update=True)
         return Response(UserSerializer(user).data, status.HTTP_200_OK)
 
 
 class DeliveryCrewsView(generics.ListCreateAPIView):
     permission_classes = [IsManager]
-    queryset = User.objects.filter(groups=DELIVERY_CREW)
+    queryset = User.objects.filter(groups=get_delivery_crew_group())
     serializer_class = UserSerializer
     
     def perform_create(self, serializer):
-        serializer.save(groups=[DELIVERY_CREW])
+        serializer.save(groups=[get_delivery_crew_group()])
         
         
 class DestroyDeliveryCrewView(views.APIView):
@@ -76,7 +73,7 @@ class DestroyDeliveryCrewView(views.APIView):
         if not user:
             return Response({"message": "couldn't find user with given id"}, status.HTTP_404_NOT_FOUND)
         
-        user.groups.remove(DELIVERY_CREW)
+        user.groups.remove(get_delivery_crew_group())
         user.save(force_update=True)
         return Response(UserSerializer(user).data, status.HTTP_200_OK)
 
@@ -103,7 +100,8 @@ class CartListCreateDestroyAPIView(SerializerByMethodMixin, generics.GenericAPIV
         return Response(status=202)
 
     def post(self, request):
-        serializer = self.get_serializer(data=request.data, context={'user': self.request.user})
+        request.data["user"] = request.user.pk
+        serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         instance = serializer.save()
         return Response(self.serializer_class_by_method['get'](instance=instance).data, status=201)
