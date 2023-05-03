@@ -131,3 +131,6 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.TokenAuthentication',
     ),
 }
+
+MANAGER_GROUP_NAME = "Manager"
+DELIVERY_CREW_GROUP_NAME = "Delivery Crew"
