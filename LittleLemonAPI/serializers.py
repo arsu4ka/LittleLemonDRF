@@ -22,3 +22,20 @@ class CartSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cart
         fields = "__all__"
+
+
+class CartCreateSerializer(serializers.ModelSerializer):
+
+    def save(self, **kwargs):
+        uint_price = self.validated_data['menuitem'].price
+        price = uint_price * self.validated_data['quantity']
+        new_cart = Cart.objects.create(uint_price=uint_price,
+                                       price=price, 
+                                       user=self.context['user'],
+                                       menuitem=self.validated_data['menuitem'],
+                                       quantity=self.validated_data['quantity'])
+        return new_cart
+
+    class Meta:
+        model = Cart
+        fields = ('menuitem', 'quantity')
