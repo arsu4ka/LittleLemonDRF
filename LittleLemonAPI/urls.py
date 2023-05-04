@@ -18,5 +18,5 @@ urlpatterns = [
     path("cart/menu-items", views.CartListCreateDestroyAPIView.as_view()),
  
     path("orders", views.OrderListCreateAPIView.as_view()),
-    path("orders/<int:pk>", views.CustomerOrderRetrieveAPIView.as_view()),
+    path("orders/<int:pk>", views.CustomerOrderRetrieveUpdateAPIView.as_view()),
 ]
