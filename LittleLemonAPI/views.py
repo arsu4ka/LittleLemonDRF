@@ -14,7 +14,7 @@ from django.db.models import Sum
 from .serializers import MenuItemSerializer, UserSerializer, CartSerializer, CartCreateSerializer, OrderItemSerializer, OrderSerializer
 
 
-class MenuItemsView(generics.ListCreateAPIView):
+class MenuItemsListCreateAPIView(generics.ListCreateAPIView):
     queryset = MenuItem.objects.all()
     serializer_class = MenuItemSerializer
     
@@ -25,7 +25,7 @@ class MenuItemsView(generics.ListCreateAPIView):
         return [permission() for permission in permission_classes]
 
     
-class MenuItemView(generics.RetrieveUpdateDestroyAPIView):
+class MenuItemsRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = MenuItem.objects.all()
     serializer_class = MenuItemSerializer
     
@@ -36,7 +36,7 @@ class MenuItemView(generics.RetrieveUpdateDestroyAPIView):
         return [permission() for permission in permission_classes]
     
     
-class ManagersView(generics.ListCreateAPIView):
+class ManagersListCreateAPIView(generics.ListCreateAPIView):
     permission_classes = [IsManager]
     queryset = User.objects.filter(groups=get_manager_group())
     serializer_class = UserSerializer
@@ -45,7 +45,7 @@ class ManagersView(generics.ListCreateAPIView):
         serializer.save(groups=[get_manager_group()])
 
 
-class DestroyManagerView(views.APIView):
+class ManagersDestoryAPIView(views.APIView):
     permission_classes = [IsManager]
     
     def delete(self, request, pk: int):
@@ -58,7 +58,7 @@ class DestroyManagerView(views.APIView):
         return Response(UserSerializer(user).data, status.HTTP_200_OK)
 
 
-class DeliveryCrewsView(generics.ListCreateAPIView):
+class DeliveryCrewListCreateAPIView(generics.ListCreateAPIView):
     permission_classes = [IsManager]
     queryset = User.objects.filter(groups=get_delivery_crew_group())
     serializer_class = UserSerializer
@@ -67,7 +67,7 @@ class DeliveryCrewsView(generics.ListCreateAPIView):
         serializer.save(groups=[get_delivery_crew_group()])
         
         
-class DestroyDeliveryCrewView(views.APIView):
+class DeliveryCrewDestoryAPIView(views.APIView):
     permission_classes = [IsManager]
     
     def delete(self, pk: int):
