@@ -6,6 +6,8 @@ urlpatterns = [
     path("", include('djoser.urls')),
     path("", include('djoser.urls.authtoken')),
     
+    path("categories", views.CategoryListAPIView.as_view()),
+    
     path("menu-items", views.MenuItemsListCreateAPIView.as_view()),
     path("menu-items/<int:pk>", views.MenuItemsRetrieveUpdateDestroyAPIView.as_view()),
     
