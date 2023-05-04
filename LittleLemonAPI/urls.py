@@ -1,6 +1,6 @@
 from django.urls import path, include
 from . import views
-
+    
 
 urlpatterns = [
     path("", include('djoser.urls')),
@@ -17,5 +17,6 @@ urlpatterns = [
     
     path("cart/menu-items", views.CartListCreateDestroyAPIView.as_view()),
  
-    path("orders", views.CustomerOrderListCreateAPIView.as_view()),
+    path("orders", views.OrderListCreateAPIView.as_view()),
+    path("orders/<int:pk>", views.CustomerOrderRetrieveAPIView.as_view()),
 ]
