@@ -1,16 +1,16 @@
 from rest_framework import generics
 from rest_framework import status
-from rest_framework import views
 from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework.permissions import IsAuthenticated
 
 from .mixins import SerializerByMethodMixin
 from .permissions import IsManager, IsDeliveryCrew, IsWorker
-from .models import MenuItem, Cart, Order, OrderItem
+from .models import MenuItem, Cart, Order, OrderItem, Category
 from .constants import get_manager_group, get_delivery_crew_group
 from django.contrib.auth.models import User
 from django.db.models import Sum
+from django.shortcuts import get_object_or_404
 from .serializers import MenuItemSerializer, UserSerializer, CartSerializer, CartCreateSerializer, OrderItemSerializer, OrderSerializer
 
 
@@ -21,8 +21,13 @@ class MenuItemsListCreateAPIView(generics.ListCreateAPIView):
     def get_permissions(self):
         permission_classes = [IsAuthenticated]
         if self.request.method == "POST":
-            permission_classes += [IsManager]
+            permission_classes.append(IsManager)
         return [permission() for permission in permission_classes]
+    
+    def perform_create(self, serializer):
+        category_id = self.request.data.get("category")
+        category = get_object_or_404(Category, pk=category_id)
+        serializer.save(category=category)
 
     
 class MenuItemsRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
@@ -32,20 +37,34 @@ class MenuItemsRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIVie
     def get_permissions(self):
         permission_classes = [IsAuthenticated]
         if self.request.method != "GET":
-            permission_classes += [IsManager]
+            permission_classes.append(IsManager)
         return [permission() for permission in permission_classes]
     
-    
-class ManagersListCreateAPIView(generics.ListCreateAPIView):
+
+class ManagersListCreateAPIView(generics.GenericAPIView):
     permission_classes = [IsManager]
-    queryset = User.objects.filter(groups=get_manager_group())
-    serializer_class = UserSerializer
     
-    def perform_create(self, serializer):
-        serializer.save(groups=[get_manager_group()])
+    def get(self, request: Request):
+        managers = User.objects.filter(groups=get_manager_group())
+        serializer = UserSerializer(managers, many=True)
+        return Response(serializer.data, status.HTTP_200_OK)
+    
+    def post(self, request: Request):
+        username = request.data.get("username")
+        if not username:
+            return Response({"message": "'username' field required"}, status.HTTP_400_BAD_REQUEST)
+        
+        user = User.objects.filter(username=username)
+        if not user.exists():
+            return Response({"message": "user with given username wasn't found"}, status.HTTP_404_NOT_FOUND)
+        
+        user = user.first()
+        user.groups.add(get_manager_group())
+        user.save(force_update=True)
+        return Response(UserSerializer(user).data, status.HTTP_200_OK)
+        
 
-
-class ManagersDestoryAPIView(views.APIView):
+class ManagersDestoryAPIView(generics.GenericAPIView):
     permission_classes = [IsManager]
     
     def delete(self, request, pk: int):
@@ -58,16 +77,30 @@ class ManagersDestoryAPIView(views.APIView):
         return Response(UserSerializer(user).data, status.HTTP_200_OK)
 
 
-class DeliveryCrewListCreateAPIView(generics.ListCreateAPIView):
+class DeliveryCrewListCreateAPIView(generics.GenericAPIView):
     permission_classes = [IsManager]
-    queryset = User.objects.filter(groups=get_delivery_crew_group())
-    serializer_class = UserSerializer
     
-    def perform_create(self, serializer):
-        serializer.save(groups=[get_delivery_crew_group()])
+    def get(self, request: Request):
+        delivery_guys = User.objects.filter(groups=get_delivery_crew_group())
+        serializer = UserSerializer(delivery_guys, many=True)
+        return Response(serializer.data, status.HTTP_200_OK)
+    
+    def post(self, request: Request):
+        username = request.data.get("username")
+        if not username:
+            return Response({"message": "'username' field required"}, status.HTTP_400_BAD_REQUEST)
+        
+        user = User.objects.filter(username=username)
+        if not user.exists():
+            return Response({"message": "user with given username wasn't found"}, status.HTTP_404_NOT_FOUND)
+        
+        user = user.first()
+        user.groups.add(get_delivery_crew_group())
+        user.save(force_update=True)
+        return Response(UserSerializer(user).data, status.HTTP_200_OK)
         
         
-class DeliveryCrewDestoryAPIView(views.APIView):
+class DeliveryCrewDestoryAPIView(generics.GenericAPIView):
     permission_classes = [IsManager]
     
     def delete(self, pk: int):
@@ -109,7 +142,7 @@ class CartListCreateDestroyAPIView(SerializerByMethodMixin, generics.GenericAPIV
         return Response(self.serializer_class_by_method['get'](instance=instance).data, status=201)
  
 
-class OrderListCreateAPIView(views.APIView):
+class OrderListCreateAPIView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     
     def get(self, request):
@@ -153,7 +186,7 @@ class OrderListCreateAPIView(views.APIView):
         return Response({"message": "success"}, status.HTTP_201_CREATED)
     
 
-class CustomerOrderRetrieveAPIView(generics.GenericAPIView):
+class CustomerOrderRetrieveUpdateAPIView(generics.GenericAPIView):
     
     def get(self, request: Request, pk: int):
         order = Order.objects.filter(pk=pk).first()
@@ -172,6 +205,7 @@ class CustomerOrderRetrieveAPIView(generics.GenericAPIView):
             return Response({"message": "order with given id doesn't exist"}, status.HTTP_400_BAD_REQUEST)
         
         order_serializer = OrderSerializer(order, data=request.data, partial=True)
+        order_serializer.is_valid(raise_exception=True)
         updated_order = order_serializer.save()
         return Response(OrderSerializer(updated_order).data, status.HTTP_200_OK)
     
