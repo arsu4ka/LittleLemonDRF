@@ -24,7 +24,7 @@ class Cart(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)    
     menuitem = models.ForeignKey(MenuItem, on_delete=models.CASCADE)
     quantity = models.SmallIntegerField()
-    uint_price = models.DecimalField(max_digits=6, decimal_places=2)
+    unit_price = models.DecimalField(max_digits=6, decimal_places=2)
     price = models.DecimalField(max_digits=6, decimal_places=2)
     
     class Meta:
@@ -36,7 +36,7 @@ class Order(models.Model):
     delivery_crew = models.ForeignKey(User, on_delete=models.SET_NULL, related_name="delivery_crew", null=True)
     status = models.BooleanField(db_index=True, default=0)
     total = models.DecimalField(max_digits=6, decimal_places=2)
-    date = models.DateField(db_index=True)
+    date = models.DateField(db_index=True, auto_now=True)
 
 
 class OrderItem(models.Model):
