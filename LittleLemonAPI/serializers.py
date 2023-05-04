@@ -1,4 +1,4 @@
-from .models import MenuItem, Cart
+from .models import MenuItem, Cart, Order, OrderItem
 from django.contrib.auth.models import User
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
@@ -29,9 +29,9 @@ class CartSerializer(serializers.ModelSerializer):
 class CartCreateSerializer(serializers.ModelSerializer):
 
     def save(self, **kwargs):
-        uint_price = self.validated_data['menuitem'].price
-        price = uint_price * self.validated_data['quantity']
-        new_cart = Cart.objects.create(uint_price=uint_price,
+        unit_price = self.validated_data['menuitem'].price
+        price = unit_price * self.validated_data['quantity']
+        new_cart = Cart.objects.create(unit_price=unit_price,
                                        price=price, 
                                        user=self.validated_data['user'],
                                        menuitem=self.validated_data['menuitem'],
@@ -47,3 +47,15 @@ class CartCreateSerializer(serializers.ModelSerializer):
                 fields = ["user", "menuitem"]
             )            
         ]
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderItem
+        fields = ('id', 'menuitem', 'quantity', 'unit_price', 'price')
+        
+class OrderSerializer(serializers.ModelSerializer):
+    order_items = OrderItemSerializer(many=True, read_only=True)
+    
+    class Meta:
+        model = Order
+        fields = ('id', 'user', 'delivery_crew', 'status', 'total', 'date', 'order_items')
