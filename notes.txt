@@ -1,6 +1,0 @@
-format: username:password - role
-
-admin:admin - superuser
-manager1:manager1 - manager
-delivery1:delivery1 - delivery crew
-customer1:customer1 - customer (no role)

@@ -1,5 +1,0 @@
-manager1: "Token b959fb85a122b9dfedee2b115a75efc0da41eba9"
-delivery1: "Token b89866b2ac15d40e203d18086c48957d7038586e"
-customer1: "Token 12729bb09d98d0ccc34309c7847c01f35c5c1eff"
-johndoe: "Token e864a85c2e01d2773b6a4d60a6868f3039f493b8"
-
