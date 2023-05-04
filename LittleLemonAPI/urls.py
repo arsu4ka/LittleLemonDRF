@@ -16,5 +16,6 @@ urlpatterns = [
     path("groups/delivery-crew/users/<int:pk>", views.DestroyDeliveryCrewView.as_view()),
     
     path("cart/menu-items", views.CartListCreateDestroyAPIView.as_view()),
-    
+ 
+    path("orders", views.CustomerOrderListCreateAPIView.as_view()),
 ]
