@@ -11,13 +11,35 @@ from .constants import get_manager_group, get_delivery_crew_group
 from django.contrib.auth.models import User
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404
-from .serializers import MenuItemSerializer, UserSerializer, CartSerializer, CartCreateSerializer, OrderItemSerializer, OrderSerializer
+from .serializers import MenuItemSerializer, UserSerializer, CartSerializer, CartCreateSerializer, OrderItemSerializer, OrderSerializer, CategorySerializer
 
+
+class CategoryListAPIView(generics.ListAPIView):
+    queryset = Category.objects.all()
+    permission_classes = (IsAuthenticated,)
+    serializer_class = CategorySerializer
+    
 
 class MenuItemsListCreateAPIView(generics.ListCreateAPIView):
-    queryset = MenuItem.objects.all()
     serializer_class = MenuItemSerializer
     
+    def get_queryset(self):
+        queryset = MenuItem.objects.all()
+        if self.request.method != "GET":
+            return queryset
+        
+        category_slug = self.request.query_params.get('category')
+        to_price = self.request.query_params.get('to_price')
+        from_price = self.request.query_params.get("from_price")
+        
+        if category_slug:
+            queryset = queryset.filter(category__slug=category_slug)
+        if to_price:
+            queryset = queryset.filter(price__lte=to_price)
+        if from_price:
+            queryset = queryset.filter(price__gte=from_price)
+        return queryset
+        
     def get_permissions(self):
         permission_classes = [IsAuthenticated]
         if self.request.method == "POST":
@@ -220,7 +242,7 @@ class CustomerOrderRetrieveUpdateAPIView(generics.GenericAPIView):
             request.data = {"status": bool(new_status)}
             return self.put(request, pk)
         except:
-            return Response({"message": "you can change only status of the request"}, status.HTTP_400_BAD_REQUEST)
+            return Response({"message": "you can change only status of the order"}, status.HTTP_400_BAD_REQUEST)
             
     def delete(self, request: Request, pk: int):
         order = Order.objects.filter(pk=pk).first()
