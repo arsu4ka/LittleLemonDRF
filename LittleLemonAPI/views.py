@@ -6,7 +6,7 @@ from rest_framework.request import Request
 from rest_framework.permissions import IsAuthenticated
 
 from .mixins import SerializerByMethodMixin
-from .permissions import IsManager
+from .permissions import IsManager, IsDeliveryCrew, IsWorker
 from .models import MenuItem, Cart, Order, OrderItem
 from .constants import get_manager_group, get_delivery_crew_group
 from django.contrib.auth.models import User
@@ -107,20 +107,33 @@ class CartListCreateDestroyAPIView(SerializerByMethodMixin, generics.GenericAPIV
         serializer.is_valid(raise_exception=True)
         instance = serializer.save()
         return Response(self.serializer_class_by_method['get'](instance=instance).data, status=201)
+ 
 
-
-class CustomerOrderListCreateAPIView(views.APIView):
+class OrderListCreateAPIView(views.APIView):
     permission_classes = [IsAuthenticated]
     
-    def get(self, request: Request):
-        orders = Order.objects.filter(user=request.user)
-        return Response(OrderSerializer(orders, many=True).data, status.HTTP_200_OK)
-    
+    def get(self, request):
+        if IsManager().has_permission(request):
+            orders = Order.objects.all()
+        elif IsDeliveryCrew().has_permission(request):
+            orders = Order.objects.filter(delivery_crew=request.user)
+        else:
+            orders = Order.objects.filter(user=request.user)
+            
+        serialized_orders = []
+        for order in orders:
+            order_items = OrderItem.objects.filter(order=order)
+            item_serializer = OrderItemSerializer(order_items, many=True)
+            serialized_order = OrderSerializer(order).data
+            serialized_order["order_items"] = item_serializer.data
+            serialized_orders.append(serialized_order)
+        return Response(serialized_orders, status=status.HTTP_200_OK)
     
     # works well, but without serializer
-    # 
     def post(self, request: Request):
         carts = Cart.objects.filter(user=request.user)
+        if not carts.exists():
+            return Response({"message": "your cart is empy"}, status.HTTP_400_BAD_REQUEST)
         
         order = Order.objects.create(
             user=request.user,
@@ -138,3 +151,59 @@ class CustomerOrderListCreateAPIView(views.APIView):
             
         carts.delete()
         return Response({"message": "success"}, status.HTTP_201_CREATED)
+    
+
+class CustomerOrderRetrieveAPIView(generics.GenericAPIView):
+    
+    def get(self, request: Request, pk: int):
+        order = Order.objects.filter(pk=pk).first()
+        if not order or order.user != request.user:
+            return Response({"message": "either this order doesn't exist or it's not yours"}, status.HTTP_400_BAD_REQUEST)
+        
+        order_items = OrderItem.objects.filter(order=order)
+        order_items_serializer = OrderItemSerializer(order_items, many=True)
+        serialized_order = OrderSerializer(order).data
+        serialized_order["order_items"] = order_items_serializer.data
+        return Response(serialized_order, status.HTTP_200_OK)
+    
+    def put(self, request: Request, pk: int):
+        order = Order.objects.filter(pk=pk).first()
+        if not order:
+            return Response({"message": "order with given id doesn't exist"}, status.HTTP_400_BAD_REQUEST)
+        
+        order_serializer = OrderSerializer(order, data=request.data, partial=True)
+        updated_order = order_serializer.save()
+        return Response(OrderSerializer(updated_order).data, status.HTTP_200_OK)
+    
+    def patch(self, request: Request, pk: int):
+        if IsManager().has_permission(request):
+            return self.put(request, pk)
+        
+        try:
+            new_status = request.data.get("status")
+            if new_status == None:
+                raise Exception()
+            request.data = {"status": bool(new_status)}
+            return self.put(request, pk)
+        except:
+            return Response({"message": "you can change only status of the request"}, status.HTTP_400_BAD_REQUEST)
+            
+    def delete(self, request: Request, pk: int):
+        order = Order.objects.filter(pk=pk).first()
+        if not order:
+            return Response({"message": "order with given id doesn't exist"}, status.HTTP_400_BAD_REQUEST)
+        
+        orderitems = OrderItem.objects.filter(order=order)
+        order.delete()
+        orderitems.delete()
+        return Response({"message": "success"}, status.HTTP_200_OK)
+        
+    def get_permissions(self):
+        permissions = [IsAuthenticated]
+        
+        if self.request.method == "DELETE" or self.request.method == "PUT":
+            permissions.append(IsManager)
+        elif self.request.method == "PATCH":
+            permissions.append(IsWorker)
+        
+        return [permission() for permission in permissions]
