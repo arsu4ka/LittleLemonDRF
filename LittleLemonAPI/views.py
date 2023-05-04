@@ -2,14 +2,16 @@ from rest_framework import generics
 from rest_framework import status
 from rest_framework import views
 from rest_framework.response import Response
+from rest_framework.request import Request
 from rest_framework.permissions import IsAuthenticated
 
 from .mixins import SerializerByMethodMixin
 from .permissions import IsManager
-from .models import MenuItem, Cart
+from .models import MenuItem, Cart, Order, OrderItem
 from .constants import get_manager_group, get_delivery_crew_group
 from django.contrib.auth.models import User
-from .serializers import MenuItemSerializer, UserSerializer, CartSerializer, CartCreateSerializer
+from django.db.models import Sum
+from .serializers import MenuItemSerializer, UserSerializer, CartSerializer, CartCreateSerializer, OrderItemSerializer, OrderSerializer
 
 
 class MenuItemsView(generics.ListCreateAPIView):
@@ -105,3 +107,34 @@ class CartListCreateDestroyAPIView(SerializerByMethodMixin, generics.GenericAPIV
         serializer.is_valid(raise_exception=True)
         instance = serializer.save()
         return Response(self.serializer_class_by_method['get'](instance=instance).data, status=201)
+
+
+class CustomerOrderListCreateAPIView(views.APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request: Request):
+        orders = Order.objects.filter(user=request.user)
+        return Response(OrderSerializer(orders, many=True).data, status.HTTP_200_OK)
+    
+    
+    # works well, but without serializer
+    # 
+    def post(self, request: Request):
+        carts = Cart.objects.filter(user=request.user)
+        
+        order = Order.objects.create(
+            user=request.user,
+            total = carts.aggregate(Sum('price'))['price__sum'] or 0
+        )
+        
+        for cart in carts:
+            OrderItem.objects.create(
+                order=order,
+                menuitem = cart.menuitem,
+                quantity = cart.quantity,
+                unit_price = cart.unit_price,
+                price = cart.price
+            )
+            
+        carts.delete()
+        return Response({"message": "success"}, status.HTTP_201_CREATED)
